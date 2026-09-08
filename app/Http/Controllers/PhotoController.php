@@ -51,7 +51,7 @@ class PhotoController extends Controller
                 [$width, $height] = $this->dimensions($file);
 
                 Photo::create([
-                    'path' => $file->store('photos', Photo::DISK),
+                    'path' => $file->store('photos', Photo::disk()),
                     'original_name' => $file->getClientOriginalName(),
                     'width' => $width,
                     'height' => $height,
@@ -70,7 +70,7 @@ class PhotoController extends Controller
      */
     public function destroy(Photo $photo): RedirectResponse
     {
-        Storage::disk(Photo::DISK)->delete($photo->path);
+        Storage::disk(Photo::disk())->delete($photo->path);
 
         $photo->delete();
 

@@ -38,7 +38,7 @@ describe('index', function () {
 
 describe('store', function () {
     test('guests cannot upload photos', function () {
-        Storage::fake(Photo::DISK);
+        Storage::fake(Photo::disk());
 
         $response = $this->post(route('photos.store'), [
             'photos' => [UploadedFile::fake()->image('street.jpg')],
@@ -49,7 +49,7 @@ describe('store', function () {
     });
 
     test('stores each uploaded file and records its dimensions', function () {
-        Storage::fake(Photo::DISK);
+        Storage::fake(Photo::disk());
         $this->actingAs(User::factory()->create());
 
         $response = $this->post(route('photos.store'), [
@@ -67,11 +67,11 @@ describe('store', function () {
             ->and($corner->height)->toBe(800)
             ->and($corner->lightbox_opens)->toBe(0);
 
-        Storage::disk(Photo::DISK)->assertExists($corner->path);
+        Storage::disk(Photo::disk())->assertExists($corner->path);
     });
 
     test('puts newly uploaded photos at the head of the gallery', function () {
-        Storage::fake(Photo::DISK);
+        Storage::fake(Photo::disk());
         $this->actingAs(User::factory()->create());
 
         $existing = Photo::factory()->create(['sort_order' => 0]);
@@ -88,7 +88,7 @@ describe('store', function () {
     });
 
     test('stores a webp upload with its dimensions', function () {
-        Storage::fake(Photo::DISK);
+        Storage::fake(Photo::disk());
         $this->actingAs(User::factory()->create());
 
         $response = $this->post(route('photos.store'), [
@@ -102,7 +102,19 @@ describe('store', function () {
             ->and($photo->width)->toBe(2000)
             ->and($photo->height)->toBe(1333);
 
-        Storage::disk(Photo::DISK)->assertExists($photo->path);
+        Storage::disk(Photo::disk())->assertExists($photo->path);
+    });
+
+    test('stores uploads on the configured photo disk', function () {
+        config()->set('photos.disk', 's3');
+        Storage::fake('s3');
+        $this->actingAs(User::factory()->create());
+
+        $this->post(route('photos.store'), [
+            'photos' => [UploadedFile::fake()->image('bucket.jpg')],
+        ]);
+
+        Storage::disk('s3')->assertExists(Photo::sole()->path);
     });
 
     test('rejects an upload with no files', function () {
@@ -117,7 +129,7 @@ describe('store', function () {
     });
 
     test('rejects a file that is not an image', function () {
-        Storage::fake(Photo::DISK);
+        Storage::fake(Photo::disk());
         $this->actingAs(User::factory()->create());
 
         $response = $this->from(route('photos.index'))->post(route('photos.store'), [
@@ -131,7 +143,7 @@ describe('store', function () {
     });
 
     test('rejects an image larger than 12 MB', function () {
-        Storage::fake(Photo::DISK);
+        Storage::fake(Photo::disk());
         $this->actingAs(User::factory()->create());
 
         $response = $this->from(route('photos.index'))->post(route('photos.store'), [
@@ -156,16 +168,16 @@ describe('destroy', function () {
     });
 
     test('deletes the photo and the file behind it', function () {
-        Storage::fake(Photo::DISK);
+        Storage::fake(Photo::disk());
         $this->actingAs(User::factory()->create());
 
-        $path = UploadedFile::fake()->image('gone.jpg')->store('photos', Photo::DISK);
+        $path = UploadedFile::fake()->image('gone.jpg')->store('photos', Photo::disk());
         $photo = Photo::factory()->create(['path' => $path]);
 
         $response = $this->delete(route('photos.destroy', $photo));
 
         $response->assertRedirect(route('photos.index'));
         $this->assertDatabaseMissing('photos', ['id' => $photo->id]);
-        Storage::disk(Photo::DISK)->assertMissing($path);
+        Storage::disk(Photo::disk())->assertMissing($path);
     });
 });

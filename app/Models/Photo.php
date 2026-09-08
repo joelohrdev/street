@@ -29,9 +29,12 @@ class Photo extends Model
     use HasFactory;
 
     /**
-     * The disk the uploaded photo files live on.
+     * The filesystem disk the uploaded photo files live on.
      */
-    public const DISK = 'public';
+    public static function disk(): string
+    {
+        return config()->string('photos.disk');
+    }
 
     /**
      * Apply the running order the gallery is curated in.
@@ -49,7 +52,7 @@ class Photo extends Model
      */
     public function url(): string
     {
-        return Storage::disk(self::DISK)->url($this->path);
+        return Storage::disk(self::disk())->url($this->path);
     }
 
     /**
